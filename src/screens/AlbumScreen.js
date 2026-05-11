@@ -88,13 +88,6 @@ export default function AlbumScreen({ estampas, actualizarEstampa }) {
         });
     }, [seleccionesGrupo, busqueda]);
 
-    const mapaPorNumero = useMemo(() => {
-        const mapa = new Map();
-        estampas.forEach((estampa) => {
-            mapa.set(estampa.numero, estampa);
-        });
-        return mapa;
-    }, [estampas]);
     const mapaPorCodigo = useMemo(() => {
         const mapa = new Map();
         estampas.forEach((estampa) => {
@@ -113,7 +106,7 @@ export default function AlbumScreen({ estampas, actualizarEstampa }) {
             let obtenidas = 0;
             for (let puesto = 1; puesto <= cantidad; puesto++) {
                 const codigo = `${seleccion.codigo}-${puesto}`;
-                const estampa = mapaPorCodigo.get(codigo) || mapaPorNumero.get(obtenerNumeroEstampa(seleccion, puesto));
+                const estampa = mapaPorCodigo.get(codigo);
                 if (estampa?.estado === "obtenido") {
                     obtenidas += 1;
                 }
@@ -121,7 +114,7 @@ export default function AlbumScreen({ estampas, actualizarEstampa }) {
             mapa.set(grupo, (mapa.get(grupo) || 0) + obtenidas);
         });
         return mapa;
-    }, [estampas, mapaPorCodigo, mapaPorNumero]);
+    }, [mapaPorCodigo]);
 
     const seleccion =
         SELECCIONES.find((item) => item.codigo === seleccionActiva) ??
@@ -140,7 +133,7 @@ export default function AlbumScreen({ estampas, actualizarEstampa }) {
         let repetidas = 0;
         numeros.forEach((puesto) => {
             const codigo = `${seleccion.codigo}-${puesto}`;
-            const estampa = mapaPorCodigo.get(codigo) || mapaPorNumero.get(obtenerNumeroEstampa(seleccion, puesto));
+            const estampa = mapaPorCodigo.get(codigo);
             if (estampa?.estado === "obtenido") {
                 obtenidas += 1;
             }
@@ -149,14 +142,14 @@ export default function AlbumScreen({ estampas, actualizarEstampa }) {
             }
         });
         return { obtenidas, repetidas };
-    }, [seleccion, numeros, mapaPorNumero]);
+    }, [seleccion, numeros, mapaPorCodigo]);
 
     const marcar = (puesto) => {
         if (!seleccion) {
             return;
         }
         const codigo = `${seleccion.codigo}-${puesto}`;
-        const estampa = mapaPorCodigo.get(codigo) || mapaPorNumero.get(obtenerNumeroEstampa(seleccion, puesto));
+        const estampa = mapaPorCodigo.get(codigo);
         if (!estampa) {
             return;
         }
@@ -179,7 +172,7 @@ export default function AlbumScreen({ estampas, actualizarEstampa }) {
             return;
         }
         const codigo = `${seleccion.codigo}-${puesto}`;
-        const estampa = mapaPorCodigo.get(codigo) || mapaPorNumero.get(obtenerNumeroEstampa(seleccion, puesto));
+        const estampa = mapaPorCodigo.get(codigo);
         if (!estampa) {
             return;
         }
@@ -361,7 +354,7 @@ export default function AlbumScreen({ estampas, actualizarEstampa }) {
                         return null;
                     }
                     const codigo = `${seleccion.codigo}-${item}`;
-                    const estampa = mapaPorCodigo.get(codigo) || mapaPorNumero.get(obtenerNumeroEstampa(seleccion, item));
+                    const estampa = mapaPorCodigo.get(codigo);
                     const estaObtenida = estampa?.estado === "obtenido";
                     const tieneRepetidas = (estampa?.repetidas ?? 0) > 0;
                     return (

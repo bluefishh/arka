@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const CLAVE_ALMACEN = "arka.estampas.v1";
+const CLAVE_ALMACEN = "arka.estampas.v3";
 
 export const cargarEstampas = async () => {
     const raw = await AsyncStorage.getItem(CLAVE_ALMACEN);

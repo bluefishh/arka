@@ -50,5 +50,5 @@ export const SELECCIONES = [
 	{ nombre: "FWC Especiales", codigo: "FWC1", inicio: 0, cantidad: 5, grupo: "FWC", categoria: "FWC", rango: "00-4" },
 	{ nombre: "FWC Balón y países", codigo: "FWC2", inicio: 5, cantidad: 4, grupo: "FWC", categoria: "FWC", rango: "5-8" },
 	{ nombre: "FWC Historia", codigo: "FWC3", inicio: 9, cantidad: 11, grupo: "FWC", categoria: "FWC", rango: "9-19" },
-	{ nombre: "CocaCola", codigo: "CC1", inicio: 2001, cantidad: 14, grupo: "COCACOLA", categoria: "CocaCola", rango: "1-14" },
+	{ nombre: "CocaCola", codigo: "CC1", inicio: 1, cantidad: 14, grupo: "COCACOLA", categoria: "CocaCola", rango: "1-14" },
 ];

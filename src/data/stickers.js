@@ -62,7 +62,7 @@ const crearEstampasSelecciones = () => {
             const tipo = categoria === "Escudo" ? "Brillante" : "Normal";
 
             estampas.push({
-                id: `S${numero}`,
+                id: `S${seleccion.codigo}-${puesto}`,
                 numero,
                 codigo: `${seleccion.codigo}-${puesto}`,
                 nombre,

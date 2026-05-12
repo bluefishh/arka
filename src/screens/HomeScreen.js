@@ -12,7 +12,14 @@ const esMismoDia = (fecha, hoy) => {
     );
 };
 
-export default function HomeScreen({ estampas, navigation }) {
+export default function HomeScreen({
+    estampas,
+    navigation,
+    exportarAvance,
+    importarAvance,
+    tieneCambios,
+    restablecerAvance,
+}) {
     const { height } = Dimensions.get("window");
     const hoy = new Date();
     const recientes = estampas
@@ -25,6 +32,13 @@ export default function HomeScreen({ estampas, navigation }) {
     const ultimasRepetidas = recientesHoy
         .filter((estampa) => estampa.repetidas > 0)
         .slice(0, 3);
+
+    const formatearNumero = (estampa) => {
+        if (estampa.numero === 0) {
+            return "00";
+        }
+        return String(estampa.numero);
+    };
 
     const progresoPorSeleccion = estampas.reduce((acc, estampa) => {
         if (CATEGORIAS_SIN_SELECCION.has(estampa.categoria)) {
@@ -63,6 +77,11 @@ export default function HomeScreen({ estampas, navigation }) {
                 <Text style={styles.title}>ARKA</Text>
 
                 <Text style={styles.scrollHint}>Desliza para continuar</Text>
+
+                <Pressable style={styles.startImportButton} onPress={importarAvance}>
+                    <Ionicons name="cloud-upload" size={16} color="#ffffff" />
+                    <Text style={styles.startImportText}>Iniciar desde archivo</Text>
+                </Pressable>
             </View>
 
             <View style={styles.section}>
@@ -80,7 +99,7 @@ export default function HomeScreen({ estampas, navigation }) {
                             ) : (
                                 ultimasMarcadas.map((estampa) => (
                                     <Text key={estampa.id} style={styles.cardItem}>
-                                        #{estampa.numero} · {estampa.nombre}
+                                        #{formatearNumero(estampa)} · {estampa.nombre}
                                     </Text>
                                 ))
                             )}
@@ -92,7 +111,7 @@ export default function HomeScreen({ estampas, navigation }) {
                             ) : (
                                 ultimasRepetidas.map((estampa) => (
                                     <Text key={estampa.id} style={styles.cardItem}>
-                                        #{estampa.numero} · {estampa.nombre}
+                                        #{formatearNumero(estampa)} · {estampa.nombre}
                                     </Text>
                                 ))
                             )}
@@ -131,6 +150,40 @@ export default function HomeScreen({ estampas, navigation }) {
                         ))}
                     </View>
                 )}
+            </View>
+
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Respaldo</Text>
+                <View style={styles.sectionCard}>
+                    <Text style={styles.cardEmpty}>
+                        Tu avance se guarda automaticamente. Al volver a entrar veras lo ultimo.
+                    </Text>
+                    <View style={styles.backupRow}>
+                        <Pressable
+                            style={[styles.backupButton, styles.backupPrimary]}
+                            onPress={exportarAvance}
+                        >
+                            <Ionicons name="download" size={16} color="#ffffff" />
+                            <Text style={[styles.backupText, styles.backupTextPrimary]}>
+                                Exportar
+                            </Text>
+                        </Pressable>
+                        <Pressable
+                            style={[styles.backupButton, styles.backupSecondary]}
+                            onPress={importarAvance}
+                        >
+                            <Ionicons name="cloud-upload" size={16} color="#1f2937" />
+                            <Text style={styles.backupText}>Importar</Text>
+                        </Pressable>
+                    </View>
+                    <Pressable
+                        style={[styles.backupButton, styles.backupDanger]}
+                        onPress={restablecerAvance}
+                    >
+                        <Ionicons name="trash" size={16} color="#b91c1c" />
+                        <Text style={styles.backupDangerText}>Restablecer avance</Text>
+                    </Pressable>
+                </View>
             </View>
 
             <View style={styles.actions}>
@@ -205,6 +258,23 @@ const styles = StyleSheet.create({
         textAlign: "center",
         marginTop: 6,
         fontFamily: "SpaceGrotesk_400Regular",
+    },
+    startImportButton: {
+        marginTop: 12,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 14,
+        backgroundColor: "#0f172a",
+    },
+    startImportText: {
+        fontSize: 13,
+        fontWeight: "700",
+        color: "#ffffff",
+        fontFamily: "SpaceGrotesk_700Bold",
     },
     section: {
         gap: 10,
@@ -285,5 +355,48 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         color: "#166534",
         fontFamily: "SpaceGrotesk_500Medium",
+    },
+    backupRow: {
+        flexDirection: "row",
+        gap: 10,
+        marginTop: 10,
+    },
+    backupButton: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        paddingVertical: 10,
+        borderRadius: 12,
+        borderWidth: 1,
+    },
+    backupPrimary: {
+        backgroundColor: "#0f172a",
+        borderColor: "#0f172a",
+    },
+    backupSecondary: {
+        backgroundColor: "#ffffff",
+        borderColor: "#e5e7eb",
+    },
+    backupDanger: {
+        marginTop: 10,
+        backgroundColor: "#fef2f2",
+        borderColor: "#fecaca",
+    },
+    backupText: {
+        fontSize: 13,
+        fontWeight: "700",
+        color: "#1f2937",
+        fontFamily: "SpaceGrotesk_700Bold",
+    },
+    backupTextPrimary: {
+        color: "#ffffff",
+    },
+    backupDangerText: {
+        fontSize: 13,
+        fontWeight: "700",
+        color: "#b91c1c",
+        fontFamily: "SpaceGrotesk_700Bold",
     },
 });

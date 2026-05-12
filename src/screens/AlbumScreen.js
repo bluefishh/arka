@@ -183,6 +183,7 @@ export default function AlbumScreen({ estampas, actualizarEstampa }) {
         }));
     };
 
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Mi álbum</Text>

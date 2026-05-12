@@ -47,15 +47,15 @@ export default function StickerRow({
                 </View>
             </View>
 
-            <View style={styles.actions}> 
+            <View style={styles.actions}>
                 <View style={styles.repeatControls}>
-                    <Pressable style={styles.repeatBtn} onPress={alRestarRepetida}>
-                        <Ionicons name="remove" size={16} color="#2563eb" />
+                    <Pressable style={[styles.repeatBtn, styles.repeatBtnGhost]} onPress={alRestarRepetida}>
+                        <Ionicons name="remove" size={16} color="#0f172a" />
                     </Pressable>
                     <View style={styles.repeatCount}>
                         <Text style={styles.repeatCountText}>{estampa.repetidas}</Text>
                     </View>
-                    <Pressable style={styles.repeatBtn} onPress={alSumarRepetida}>
+                    <Pressable style={[styles.repeatBtn, styles.repeatBtnPrimary]} onPress={alSumarRepetida}>
                         <Ionicons name="add" size={16} color="#ffffff" />
                     </Pressable>
                 </View>
@@ -159,7 +159,15 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#eaf2ff",
+        borderWidth: 1,
+    },
+    repeatBtnGhost: {
+        backgroundColor: "#ffffff",
+        borderColor: "#e2e8f0",
+    },
+    repeatBtnPrimary: {
+        backgroundColor: "#0f172a",
+        borderColor: "#0f172a",
     },
     repeatCount: {
         minWidth: 44,

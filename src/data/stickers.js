@@ -12,6 +12,35 @@ export const TOTAL_ESTAMPAS = INTRO_CANTIDAD + CANTIDAD_SELECCIONES + ESPECIALES
 
 const INTRO_SECCION = "Intro FIFA";
 
+const FWC_NOMBRES = {
+    FWC1: [
+        "We Are Panini",
+        "FIFA World Cup",
+        "FIFA World Cup",
+        "Official Mascots",
+        "Official Slogan",
+    ],
+    FWC2: [
+        "Official Match Ball",
+        "Host Country Emblem",
+        "Host Country Emblem",
+        "Host Country Emblem",
+    ],
+    FWC3: [
+        "Italy 1934™",
+        "Uruguay 1950™",
+        "Switzerland 1954™",
+        "Chile 1962™",
+        "Germany 1974™",
+        "Mexico 1986™",
+        "USA 1994™",
+        "Korea/Japan 2002™",
+        "Germany 2006™",
+        "Brazil 2014™",
+        "Qatar 2022™",
+    ],
+};
+
 const INTRO_ELEMENTOS = [
     "Logo FIFA World Cup 2026",
     "Trofeo FIFA World Cup",
@@ -50,12 +79,16 @@ const crearEstampasSelecciones = () => {
         for (let puesto = 1; puesto <= cantidad; puesto += 1) {
             const numero = seleccion.inicio + puesto - 1;
             let categoria = "Jugador";
-            let nombre = `${seleccion.nombre} Jugador ${puesto}`;
-            if (puesto === 19) {
+            let nombre = `${seleccion.nombre}`;
+            const nombresFwc = FWC_NOMBRES[seleccion.codigo];
+            if (nombresFwc && nombresFwc[puesto - 1]) {
+                nombre = nombresFwc[puesto - 1];
+            }
+            if (puesto === 13 && seleccion.categoria !== "FWC" && seleccion.categoria !== "CocaCola") {
                 categoria = "Foto grupal";
                 nombre = `${seleccion.nombre} Foto grupal`;
             }
-            if (puesto === 20) {
+            if (puesto === 1 && seleccion.categoria !== "FWC" && seleccion.categoria !== "CocaCola") {
                 categoria = "Escudo";
                 nombre = `${seleccion.nombre} Escudo`;
             }

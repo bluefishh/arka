@@ -28,6 +28,12 @@
     },
     "plugins": [
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "429ae2f5-fb16-43c7-a826-3e69175d6adf"
+      }
+    },
+    "owner": "bluefishh"
   }
 }

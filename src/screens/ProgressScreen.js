@@ -69,8 +69,13 @@ export default function ProgressScreen({ estampas }) {
         if (grupoActivo !== "GENERAL") {
             items = items.filter((item) => item.grupo === grupoActivo);
         }
-        
-        return items;
+
+        return items.sort((a, b) => {
+            if (b.porcentaje !== a.porcentaje) {
+                return b.porcentaje - a.porcentaje;
+            }
+            return b.obtenidas - a.obtenidas;
+        });
     }, [grupoActivo, estampasPorSeleccion]);
 
     const gruposObj = SELECCIONES.reduce((acc, seleccion) => {
@@ -105,6 +110,11 @@ export default function ProgressScreen({ estampas }) {
                     ? 0
                     : Math.round((entrada.obtenidas / entrada.total) * 100),
         };
+    }).sort((a, b) => {
+        if (b.porcentaje !== a.porcentaje) {
+            return b.porcentaje - a.porcentaje;
+        }
+        return b.obtenidas - a.obtenidas;
     });
 
     const totales = progresoPorGrupo.reduce(
@@ -167,6 +177,9 @@ export default function ProgressScreen({ estampas }) {
                             </View>
                             <Text style={styles.summaryValue}>{item.total}</Text>
                             <Text style={styles.cardMeta}>Obtenidos {item.obtenidas} · Faltantes {item.faltantes}</Text>
+                            <View style={styles.progressBar}>
+                                <View style={[styles.progressFill, { width: `${item.porcentaje}%` }]} />
+                            </View>
                             <Text style={[styles.cardPercent, { marginTop: 6 }]}>{item.porcentaje}%</Text>
                         </View>
                     )}
@@ -279,7 +292,7 @@ const styles = StyleSheet.create({
     heroPercent: {
         fontSize: 28,
         fontWeight: "700",
-        color: "#60a5fa",
+        color: "#0f172a",
         fontFamily: "SpaceGrotesk_700Bold",
     },
     summaryCard: {

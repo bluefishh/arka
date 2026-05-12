@@ -36,6 +36,7 @@ function MainNavigator({
 		<NavigationContainer>
 			<Tab.Navigator
 				sceneContainerStyle={{ backgroundColor: "#f8fafc" }}
+				safeAreaInsets={{ bottom: 0 }} 
 				screenOptions={({ route }) => {
 					const ocultarBarra = route.name === "Inicio";
 					const baseTabBarStyle = {
@@ -44,50 +45,57 @@ function MainNavigator({
 						justifyContent: "center",
 						alignSelf: "center",
 						width: "92%",
-						borderWidth: 1,
+						borderWidth: 0.5,
 						borderColor: "#e2e8f0",
 						borderRadius: 20,
 						backgroundColor: "#f8fafc",
-						shadowOpacity: 0.10,
+						shadowOpacity: 0.08,
 						shadowOffset: { width: 0, height: -4 },
-						shadowRadius: 12,
-						elevation: 8,
+						shadowRadius: 10,
+						elevation: 5,
 					};
 					const tabBarStyle = ocultarBarra
 						? { display: "none" }
 						: Platform.OS === "web"
-							? { ...baseTabBarStyle, paddingBottom: 10, paddingTop: 8, marginBottom: 16 }
-							: { ...baseTabBarStyle, height: 66 + insets.bottom, paddingBottom: insets.bottom || 12, paddingTop: 8, marginBottom: 16 };
+							? { ...baseTabBarStyle, height: 62, paddingBottom: 9, paddingTop: 7, marginBottom: 16 }
+							: { ...baseTabBarStyle, height: 62, paddingBottom: 0, paddingTop: 0, marginBottom: insets.bottom + 8, overflow: "visible" };
 					return {
 						headerShown: false,
-						tabBarActiveTintColor: "#56595e",
+						tabBarActiveTintColor: "#1f2937",
 						tabBarInactiveTintColor: "#94a3b8",
 						tabBarShowLabel: false,
 						tabBarItemStyle: {
+							flex: 1,
+							height: 62,
 							justifyContent: "center",
 							alignItems: "center",
 							paddingVertical: 0,
+							marginVertical: 0,
+							overflow: "visible",
 						},
-						tabBarStyle: tabBarStyle,
-						tabBarIcon: ({ color, size, focused }) => {
+						tabBarIconStyle: {
+							width: "100%",
+							height: "100%",
+							alignItems: "center",
+							justifyContent: "center",
+						},
+						tabBarStyle,
+						tabBarIcon: ({ color, focused, size }) => {
 							let iconName = "home";
-							switch (route.name) {
-								case "Inicio":
-									iconName = focused ? "home" : "home-outline";
-									break;
-								case "Mi álbum":
-									iconName = focused ? "albums" : "albums-outline";
-									break;
-								case "Repetidas":
-									iconName = focused ? "repeat" : "repeat-outline";
-									break;
-								case "Progreso":
-									iconName = focused ? "stats-chart" : "stats-chart-outline";
-									break;
-								default:
-									iconName = "home";
+							if (route.name === "Mi álbum") {
+								iconName = "book";
+							} else if (route.name === "Repetidas") {
+								iconName = "repeat";
+							} else if (route.name === "Progreso") {
+								iconName = "stats-chart";
 							}
-							return <Ionicons name={iconName} size={24} color={color} />;
+							return (
+								<Ionicons
+									name={iconName}
+									size={focused ? 24 : size ?? 22}
+									color={color}
+								/>
+							);
 						},
 					};
 				}}
@@ -137,6 +145,7 @@ export default function App() {
 		SpaceGrotesk_400Regular,
 		SpaceGrotesk_500Medium,
 		SpaceGrotesk_700Bold,
+		...Ionicons.font,
 	});
 
 	const normalizarImportadas = (importadas) => {
@@ -187,21 +196,50 @@ export default function App() {
 
 	const exportarAvance = async () => {
 		try {
-			if (!FileSystem.cacheDirectory) {
-				Alert.alert("Exportacion", "No se encontro un directorio temporal.");
-				return;
-			}
 			const now = new Date();
 			const nombre = `arka-estampas-${now.toISOString().replace(/[:.]/g, "-")}.json`;
-			const uri = `${FileSystem.cacheDirectory}${nombre}`;
 			const payload = {
 				version: 1,
 				exportadoEn: now.toISOString(),
 				estampas,
 			};
+			if (Platform.OS === "android") {
+				try {
+					const saf = FileSystem.StorageAccessFramework;
+					if (saf?.requestDirectoryPermissionsAsync) {
+						const permiso = await saf.requestDirectoryPermissionsAsync();
+						if (permiso.granted) {
+							const fileUri = await saf.createFileAsync(
+								permiso.directoryUri,
+								nombre,
+								"application/json"
+							);
+							await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(payload), {
+								encoding: FileSystem.EncodingType.UTF8,
+							});
+							Alert.alert("Exportacion lista", "Archivo guardado en la carpeta elegida.");
+							setTieneCambios(false);
+							return;
+						}
+					}
+				} catch (error) {
+					// En Expo Go puede fallar SAF; se usa el flujo de compartir.
+				}
+			}
+
+			const baseDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
+			if (!baseDir) {
+				Alert.alert(
+					"Exportacion",
+					"No se encontro un directorio para exportar."
+				);
+				return;
+			}
+			const uri = `${baseDir}${nombre}`;
 			await FileSystem.writeAsStringAsync(uri, JSON.stringify(payload), {
 				encoding: FileSystem.EncodingType.UTF8,
 			});
+
 			const disponible = await Sharing.isAvailableAsync();
 			if (disponible) {
 				await Sharing.shareAsync(uri, {

@@ -9,6 +9,7 @@ import {
     View,
     TextInput,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SvgXml } from "react-native-svg";
 import { obtenerBanderaSvg } from "../utils/flags";
 import { SELECCIONES } from "../data/teams";
@@ -63,6 +64,7 @@ const formatearNumeroEstampa = (numero) => {
 };
 
 export default function AlbumScreen({ estampas, actualizarEstampa }) {
+    const insets = useSafeAreaInsets();
     const [grupoActivo, setGrupoActivo] = useState("GENERAL");
     const [pickerAbierto, setPickerAbierto] = useState(false);
     const [busqueda, setBusqueda] = useState("");
@@ -185,7 +187,7 @@ export default function AlbumScreen({ estampas, actualizarEstampa }) {
 
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
             <Text style={styles.title}>Mi álbum</Text>
             <View style={styles.groupRow}>
                 {GRUPOS.map((grupo) => {

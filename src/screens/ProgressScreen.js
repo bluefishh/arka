@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { SvgXml } from "react-native-svg";
 import { useState, useMemo } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { obtenerBanderaSvg } from "../utils/flags";
 import { SELECCIONES } from "../data/teams";
 
@@ -28,6 +29,7 @@ const obtenerEtiquetaSeleccion = (seleccion) => {
 };
 
 export default function ProgressScreen({ estampas }) {
+    const insets = useSafeAreaInsets();
     const [grupoActivo, setGrupoActivo] = useState("GENERAL");
 
     const estampasPorSeleccion = estampas.reduce((acc, estampa) => {
@@ -132,7 +134,7 @@ export default function ProgressScreen({ estampas }) {
             : Math.round((totales.obtenidas / totales.total) * 100);
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
             <Text style={styles.title}>Progreso</Text>
             <View style={styles.heroRow}>
                 <View style={styles.heroCard}>

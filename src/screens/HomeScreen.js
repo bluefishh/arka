@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const CATEGORIAS_SIN_SELECCION = new Set(["Intro FIFA", "Especiales"]);
 
@@ -20,6 +21,7 @@ export default function HomeScreen({
     tieneCambios,
     restablecerAvance,
 }) {
+    const insets = useSafeAreaInsets();
     const { height } = Dimensions.get("window");
     const hoy = new Date();
     const recientes = estampas
@@ -67,7 +69,10 @@ export default function HomeScreen({
     const completas = selecciones.filter((entrada) => entrada.porcentaje === 100);
 
     return (
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <ScrollView
+            style={styles.container}
+            contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
+        >
             <View style={styles.heroWrap}>
                 <Image
                     source={require("../../assets/mundial_2026.png")}

@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import React, { useState, useMemo } from "react";
 import { SvgXml } from "react-native-svg";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import StickerRow from "../components/StickerRow";
 import { SELECCIONES } from "../data/teams";
 import { obtenerBanderaSvg } from "../utils/flags";
@@ -37,6 +38,7 @@ const obtenerEtiquetaGrupo = (grupo) => {
     return `Grupo ${grupo}`;
 };
 export default function RepeatsScreen({ estampas, actualizarEstampa }) {
+    const insets = useSafeAreaInsets();
     const [grupoActivo, setGrupoActivo] = useState("GENERAL");
     const [paisActivo, setPaisActivo] = useState("TODOS");
     const [pickerAbierto, setPickerAbierto] = useState(false);
@@ -127,7 +129,7 @@ export default function RepeatsScreen({ estampas, actualizarEstampa }) {
     };
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
             <Text style={styles.title}>Repetidas</Text>
 
             <View style={styles.groupRow}>

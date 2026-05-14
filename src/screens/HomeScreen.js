@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Alert, Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const CATEGORIAS_SIN_SELECCION = new Set(["Intro FIFA", "Especiales"]);
@@ -16,14 +17,23 @@ const esMismoDia = (fecha, hoy) => {
 export default function HomeScreen({
     estampas,
     navigation,
-    exportarAvance,
-    importarAvance,
+    compartirAvanceTexto,
+    copiarAvanceTexto,
+    importarDesdeTexto,
+    historialRespaldos,
+    restaurarDesdeHistorial,
     tieneCambios,
+    ultimoGuardadoEn,
     restablecerAvance,
 }) {
     const insets = useSafeAreaInsets();
     const { height } = Dimensions.get("window");
     const hoy = new Date();
+    const [modalTextoVisible, setModalTextoVisible] = useState(false);
+    const [modalHistorialVisible, setModalHistorialVisible] = useState(false);
+    const [textoImportacion, setTextoImportacion] = useState("");
+    const [errorImportacion, setErrorImportacion] = useState("");
+    const historial = Array.isArray(historialRespaldos) ? historialRespaldos : [];
     const recientes = estampas
         .filter((estampa) => estampa.actualizadoEn)
         .sort((a, b) => new Date(b.actualizadoEn) - new Date(a.actualizadoEn));
@@ -82,11 +92,6 @@ export default function HomeScreen({
                 <Text style={styles.title}>ARKA</Text>
 
                 <Text style={styles.scrollHint}>Desliza para continuar</Text>
-
-                <Pressable style={styles.startImportButton} onPress={importarAvance}>
-                    <Ionicons name="cloud-upload" size={16} color="#ffffff" />
-                    <Text style={styles.startImportText}>Iniciar desde archivo</Text>
-                </Pressable>
             </View>
 
             <View style={styles.section}>
@@ -160,27 +165,60 @@ export default function HomeScreen({
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Respaldo</Text>
                 <View style={styles.sectionCard}>
+                    <View style={styles.statusRow}>
+                        <View style={[styles.statusPill, tieneCambios ? styles.statusWarn : styles.statusOk]}>
+                            <Ionicons
+                                name={tieneCambios ? "alert" : "checkmark"}
+                                size={12}
+                                color={tieneCambios ? "#b45309" : "#166534"}
+                            />
+                            <Text style={[styles.statusText, tieneCambios ? styles.statusTextWarn : styles.statusTextOk]}>
+                                {tieneCambios ? "Sin guardar" : "Guardado"}
+                            </Text>
+                        </View>
+                        {ultimoGuardadoEn ? (
+                            <Text style={styles.statusTime}>Ultimo: {new Date(ultimoGuardadoEn).toLocaleString()}</Text>
+                        ) : null}
+                    </View>
                     <Text style={styles.cardEmpty}>
                         Tu avance se guarda automaticamente. Al volver a entrar veras lo ultimo.
                     </Text>
                     <View style={styles.backupRow}>
                         <Pressable
-                            style={[styles.backupButton, styles.backupPrimary]}
-                            onPress={exportarAvance}
+                            style={[styles.backupButton, styles.backupSecondary]}
+                            onPress={compartirAvanceTexto}
                         >
-                            <Ionicons name="download" size={16} color="#ffffff" />
-                            <Text style={[styles.backupText, styles.backupTextPrimary]}>
-                                Exportar
-                            </Text>
+                            <Ionicons name="share" size={16} color="#1f2937" />
+                            <Text style={styles.backupText}>Compartir texto</Text>
                         </Pressable>
                         <Pressable
                             style={[styles.backupButton, styles.backupSecondary]}
-                            onPress={importarAvance}
+                            onPress={copiarAvanceTexto}
                         >
-                            <Ionicons name="cloud-upload" size={16} color="#1f2937" />
-                            <Text style={styles.backupText}>Importar</Text>
+                            <Ionicons name="copy" size={16} color="#1f2937" />
+                            <Text style={styles.backupText}>Copiar texto</Text>
                         </Pressable>
                     </View>
+                    <View style={styles.backupRow}>
+                        <Pressable
+                            style={[styles.backupButton, styles.backupSecondary]}
+                            onPress={() => {
+                                setErrorImportacion("");
+                                setTextoImportacion("");
+                                setModalTextoVisible(true);
+                            }}
+                        >
+                            <Ionicons name="clipboard" size={16} color="#1f2937" />
+                            <Text style={styles.backupText}>Importar texto</Text>
+                        </Pressable>
+                    </View>
+                    <Pressable
+                        style={[styles.backupButton, styles.backupSecondary]}
+                        onPress={() => setModalHistorialVisible(true)}
+                    >
+                        <Ionicons name="time" size={16} color="#1f2937" />
+                        <Text style={styles.backupText}>Restaurar historial</Text>
+                    </Pressable>
                     <Pressable
                         style={[styles.backupButton, styles.backupDanger]}
                         onPress={restablecerAvance}
@@ -190,6 +228,136 @@ export default function HomeScreen({
                     </Pressable>
                 </View>
             </View>
+
+            <Modal
+                visible={modalTextoVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setModalTextoVisible(false)}
+            >
+                <Pressable style={styles.modalBackdrop} onPress={() => setModalTextoVisible(false)}>
+                    <Pressable style={styles.modalCard} onPress={() => {}}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Importar desde texto</Text>
+                            <Pressable
+                                style={styles.modalClose}
+                                onPress={() => setModalTextoVisible(false)}
+                            >
+                                <Ionicons name="close" size={18} color="#475569" />
+                            </Pressable>
+                        </View>
+                        <ScrollView
+                            style={styles.modalScroll}
+                            contentContainerStyle={styles.modalScrollContent}
+                            keyboardShouldPersistTaps="handled"
+                        >
+                            <TextInput
+                                placeholder="Pega aqui el JSON del avance..."
+                                value={textoImportacion}
+                                onChangeText={(value) => {
+                                    setTextoImportacion(value);
+                                    if (errorImportacion) {
+                                        setErrorImportacion("");
+                                    }
+                                }}
+                                style={styles.modalInput}
+                                multiline
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                scrollEnabled
+                            />
+                            {errorImportacion ? (
+                                <Text style={styles.importError}>{errorImportacion}</Text>
+                            ) : null}
+                        </ScrollView>
+                        <View style={styles.importActions}>
+                            <Pressable
+                                style={[styles.backupButton, styles.backupSecondary]}
+                                onPress={() => setModalTextoVisible(false)}
+                            >
+                                <Text style={styles.backupText}>Cancelar</Text>
+                            </Pressable>
+                            <Pressable
+                                style={[styles.backupButton, styles.backupPrimary]}
+                                onPress={async () => {
+                                    const resultado = await importarDesdeTexto(textoImportacion);
+                                    if (resultado?.ok) {
+                                        setModalTextoVisible(false);
+                                        setTextoImportacion("");
+                                        setErrorImportacion("");
+                                    } else {
+                                        setErrorImportacion(resultado?.mensaje ?? "No se pudo importar.");
+                                    }
+                                }}
+                            >
+                                <Text style={[styles.backupText, styles.backupTextPrimary]}>
+                                    Importar
+                                </Text>
+                            </Pressable>
+                        </View>
+                    </Pressable>
+                </Pressable>
+            </Modal>
+
+            <Modal
+                visible={modalHistorialVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setModalHistorialVisible(false)}
+            >
+                <Pressable style={styles.modalBackdrop} onPress={() => setModalHistorialVisible(false)}>
+                    <Pressable style={styles.modalCard} onPress={() => {}}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Historial de respaldo</Text>
+                            <Pressable
+                                style={styles.modalClose}
+                                onPress={() => setModalHistorialVisible(false)}
+                            >
+                                <Ionicons name="close" size={18} color="#475569" />
+                            </Pressable>
+                        </View>
+                        {historial.length === 0 ? (
+                            <Text style={styles.modalEmpty}>No hay respaldos disponibles.</Text>
+                        ) : (
+                            <View style={styles.historyList}>
+                                {historial.map((item, index) => (
+                                    <Pressable
+                                        key={`${item.guardadoEn}-${index}`}
+                                        style={styles.historyItem}
+                                        onPress={() => {
+                                            Alert.alert(
+                                                "Restaurar respaldo",
+                                                "Esto reemplazara tu avance actual. ¿Deseas continuar?",
+                                                [
+                                                    { text: "Cancelar", style: "cancel" },
+                                                    {
+                                                        text: "Restaurar",
+                                                        style: "destructive",
+                                                        onPress: async () => {
+                                                            await restaurarDesdeHistorial(item);
+                                                            setModalHistorialVisible(false);
+                                                        },
+                                                    },
+                                                ]
+                                            );
+                                        }}
+                                    >
+                                        <View style={styles.historyInfo}>
+                                            <Text style={styles.historyTitle}>
+                                                {new Date(item.guardadoEn).toLocaleString()}
+                                            </Text>
+                                            <Text style={styles.historyMeta}>
+                                                {Array.isArray(item.estampas) ? item.estampas.length : 0} estampas
+                                            </Text>
+                                        </View>
+                                        <Ionicons name="arrow-forward" size={16} color="#64748b" />
+                                    </Pressable>
+                                ))}
+                            </View>
+                        )}
+                    </Pressable>
+                </Pressable>
+            </Modal>
 
             <View style={styles.actions}>
                 <Pressable
@@ -403,5 +571,128 @@ const styles = StyleSheet.create({
         fontWeight: "700",
         color: "#b91c1c",
         fontFamily: "SpaceGrotesk_700Bold",
+    },
+    statusRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 8,
+    },
+    statusPill: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: 999,
+    },
+    statusOk: {
+        backgroundColor: "#dcfce7",
+    },
+    statusWarn: {
+        backgroundColor: "#fef3c7",
+    },
+    statusText: {
+        fontSize: 11,
+        fontWeight: "700",
+        fontFamily: "SpaceGrotesk_700Bold",
+    },
+    statusTextOk: {
+        color: "#166534",
+    },
+    statusTextWarn: {
+        color: "#92400e",
+    },
+    statusTime: {
+        fontSize: 11,
+        color: "#64748b",
+        fontFamily: "SpaceGrotesk_400Regular",
+    },
+    modalBackdrop: {
+        flex: 1,
+        backgroundColor: "rgba(15, 23, 42, 0.45)",
+        justifyContent: "center",
+        padding: 16,
+    },
+    modalCard: {
+        backgroundColor: "#ffffff",
+        borderRadius: 14,
+        padding: 14,
+        gap: 10,
+        maxHeight: "80%",
+    },
+    modalScroll: {
+        maxHeight: 240,
+    },
+    modalScrollContent: {
+        gap: 8,
+    },
+    modalHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+    },
+    modalTitle: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: "#0f172a",
+        fontFamily: "SpaceGrotesk_700Bold",
+    },
+    modalClose: {
+        padding: 4,
+    },
+    modalInput: {
+        height: 180,
+        maxHeight: 220,
+        borderWidth: 1,
+        borderColor: "#e2e8f0",
+        borderRadius: 10,
+        padding: 10,
+        fontSize: 12,
+        color: "#0f172a",
+        fontFamily: "SpaceGrotesk_400Regular",
+        textAlignVertical: "top",
+    },
+    importActions: {
+        flexDirection: "row",
+        gap: 10,
+        marginTop: 4,
+    },
+    importError: {
+        fontSize: 12,
+        color: "#b91c1c",
+        fontFamily: "SpaceGrotesk_500Medium",
+    },
+    modalEmpty: {
+        fontSize: 12,
+        color: "#64748b",
+        fontFamily: "SpaceGrotesk_400Regular",
+    },
+    historyList: {
+        gap: 8,
+    },
+    historyItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: 10,
+        borderWidth: 1,
+        borderColor: "#e2e8f0",
+        borderRadius: 10,
+    },
+    historyInfo: {
+        flex: 1,
+        gap: 2,
+    },
+    historyTitle: {
+        fontSize: 12,
+        fontWeight: "700",
+        color: "#0f172a",
+        fontFamily: "SpaceGrotesk_700Bold",
+    },
+    historyMeta: {
+        fontSize: 11,
+        color: "#64748b",
+        fontFamily: "SpaceGrotesk_400Regular",
     },
 });

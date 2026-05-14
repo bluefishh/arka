@@ -9,10 +9,10 @@ import {
 	useFonts,
 } from "@expo-google-fonts/space-grotesk";
 import { StatusBar } from "expo-status-bar";
-import { Alert, Platform, StyleSheet, Text, View } from "react-native";
-import * as DocumentPicker from "expo-document-picker";
+import { Alert, Platform, Share, StyleSheet, Text, View } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system";
-import * as Sharing from "expo-sharing";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { generarEstampas } from "./src/data/stickers";
 import AlbumScreen from "./src/screens/AlbumScreen";
@@ -25,9 +25,13 @@ const Tab = createBottomTabNavigator();
 function MainNavigator({
 	estampas,
 	actualizarEstampa,
-	exportarAvance,
-	importarAvance,
+	compartirAvanceTexto,
+	copiarAvanceTexto,
+	importarDesdeTexto,
+	historialRespaldos,
+	restaurarDesdeHistorial,
 	tieneCambios,
+	ultimoGuardadoEn,
 	restablecerAvance,
 }) {
 	const insets = useSafeAreaInsets();
@@ -36,7 +40,7 @@ function MainNavigator({
 		<NavigationContainer>
 			<Tab.Navigator
 				sceneContainerStyle={{ backgroundColor: "#f8fafc" }}
-				safeAreaInsets={{ bottom: 0 }} 
+				safeAreaInsets={{ bottom: 0 }}
 				screenOptions={({ route }) => {
 					const ocultarBarra = route.name === "Inicio";
 					const baseTabBarStyle = {
@@ -105,9 +109,13 @@ function MainNavigator({
 						<HomeScreen
 							{...props}
 							estampas={estampas}
-							exportarAvance={exportarAvance}
-							importarAvance={importarAvance}
+							compartirAvanceTexto={compartirAvanceTexto}
+							copiarAvanceTexto={copiarAvanceTexto}
+							importarDesdeTexto={importarDesdeTexto}
+							historialRespaldos={historialRespaldos}
+							restaurarDesdeHistorial={restaurarDesdeHistorial}
 							tieneCambios={tieneCambios}
+							ultimoGuardadoEn={ultimoGuardadoEn}
 							restablecerAvance={restablecerAvance}
 						/>
 					)}
@@ -139,8 +147,12 @@ export default function App() {
 	const [listo, setListo] = useState(false);
 	const [avisoMostrado, setAvisoMostrado] = useState(false);
 	const [tieneCambios, setTieneCambios] = useState(false);
+	const [ultimoGuardadoEn, setUltimoGuardadoEn] = useState(null);
+	const [historialRespaldos, setHistorialRespaldos] = useState([]);
 	const archivoLocal = `${FileSystem.documentDirectory}arka-estampas.json`;
 	const almacenamientoWebKey = "arka.estampas.local";
+	const almacenamientoAsyncKey = "arka.estampas.local";
+	const historialKey = "arka.estampas.historial";
 	const [fuentesCargadas] = useFonts({
 		SpaceGrotesk_400Regular,
 		SpaceGrotesk_500Medium,
@@ -172,6 +184,27 @@ export default function App() {
 		});
 	};
 
+	const actualizarHistorial = async (payload) => {
+		try {
+			const raw = await AsyncStorage.getItem(historialKey);
+			const actual = raw ? JSON.parse(raw) : [];
+			const lista = Array.isArray(actual) ? actual : [];
+			const ultimo = lista[0];
+			if (ultimo && JSON.stringify(ultimo.estampas) === JSON.stringify(payload.estampas)) {
+				return;
+			}
+			const entrada = {
+				guardadoEn: payload.actualizadoEn,
+				estampas: payload.estampas,
+			};
+			const nuevaLista = [entrada, ...lista].slice(0, 3);
+			await AsyncStorage.setItem(historialKey, JSON.stringify(nuevaLista));
+			setHistorialRespaldos(nuevaLista);
+		} catch (error) {
+			return;
+		}
+	};
+
 	const guardarArchivoLocal = async (data) => {
 		const payload = {
 			version: 1,
@@ -184,109 +217,92 @@ export default function App() {
 			} catch (error) {
 				return;
 			}
+			setUltimoGuardadoEn(payload.actualizadoEn);
 			return;
 		}
-		if (!FileSystem.documentDirectory) {
+		try {
+			await AsyncStorage.setItem(almacenamientoAsyncKey, JSON.stringify(payload));
+			await actualizarHistorial(payload);
+			setUltimoGuardadoEn(payload.actualizadoEn);
+		} catch (error) {
 			return;
 		}
-		await FileSystem.writeAsStringAsync(archivoLocal, JSON.stringify(payload), {
-			encoding: FileSystem.EncodingType.UTF8,
-		});
 	};
 
-	const exportarAvance = async () => {
+	const compartirAvanceTexto = async () => {
 		try {
-			const now = new Date();
-			const nombre = `arka-estampas-${now.toISOString().replace(/[:.]/g, "-")}.json`;
 			const payload = {
 				version: 1,
-				exportadoEn: now.toISOString(),
+				exportadoEn: new Date().toISOString(),
 				estampas,
 			};
-			if (Platform.OS === "android") {
-				try {
-					const saf = FileSystem.StorageAccessFramework;
-					if (saf?.requestDirectoryPermissionsAsync) {
-						const permiso = await saf.requestDirectoryPermissionsAsync();
-						if (permiso.granted) {
-							const fileUri = await saf.createFileAsync(
-								permiso.directoryUri,
-								nombre,
-								"application/json"
-							);
-							await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(payload), {
-								encoding: FileSystem.EncodingType.UTF8,
-							});
-							Alert.alert("Exportacion lista", "Archivo guardado en la carpeta elegida.");
-							setTieneCambios(false);
-							return;
-						}
-					}
-				} catch (error) {
-					// En Expo Go puede fallar SAF; se usa el flujo de compartir.
-				}
-			}
-
-			const baseDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
-			if (!baseDir) {
-				Alert.alert(
-					"Exportacion",
-					"No se encontro un directorio para exportar."
-				);
-				return;
-			}
-			const uri = `${baseDir}${nombre}`;
-			await FileSystem.writeAsStringAsync(uri, JSON.stringify(payload), {
-				encoding: FileSystem.EncodingType.UTF8,
+			const resultado = await Share.share({
+				message: JSON.stringify(payload),
+				title: "Exportar avance",
 			});
-
-			const disponible = await Sharing.isAvailableAsync();
-			if (disponible) {
-				await Sharing.shareAsync(uri, {
-					mimeType: "application/json",
-					dialogTitle: "Exportar avance",
-				});
-				setTieneCambios(false);
-			} else {
-				Alert.alert("Exportacion lista", `Archivo guardado en: ${uri}`);
-				setTieneCambios(false);
+			if (resultado?.action === Share.dismissedAction) {
+				await Clipboard.setStringAsync(JSON.stringify(payload));
+				Alert.alert("Compartir", "No se compartio. Se copio al portapapeles.");
 			}
 		} catch (error) {
-			Alert.alert("Error", "No se pudo exportar el avance.");
+			try {
+				const payload = {
+					version: 1,
+					exportadoEn: new Date().toISOString(),
+					estampas,
+				};
+				await Clipboard.setStringAsync(JSON.stringify(payload));
+				Alert.alert("Compartir", "No se pudo abrir el selector. Se copio al portapapeles.");
+			} catch (innerError) {
+				Alert.alert("Compartir", "No se pudo compartir ni copiar el avance.");
+			}
 		}
 	};
 
-	const importarAvance = async () => {
+	const copiarAvanceTexto = async () => {
 		try {
-			const resultado = await DocumentPicker.getDocumentAsync({
-				copyToCacheDirectory: true,
-				type: "application/json",
-			});
-			if (resultado.canceled) {
-				return;
+			const payload = {
+				version: 1,
+				exportadoEn: new Date().toISOString(),
+				estampas,
+			};
+			await Clipboard.setStringAsync(JSON.stringify(payload));
+			Alert.alert("Portapapeles", "Avance copiado al portapapeles.");
+		} catch (error) {
+			Alert.alert("Portapapeles", "No se pudo copiar el avance.");
+		}
+	};
+
+
+	const importarDesdeTexto = async (texto) => {
+		try {
+			if (!texto || texto.trim() === "") {
+				return { ok: false, mensaje: "Pega el contenido JSON del avance." };
 			}
-			const uri = resultado.assets?.[0]?.uri ?? resultado.uri;
-			if (!uri) {
-				Alert.alert("Importacion", "No se encontro el archivo.");
-				return;
-			}
-			const raw = await FileSystem.readAsStringAsync(uri, {
-				encoding: FileSystem.EncodingType.UTF8,
-			});
-			const parsed = JSON.parse(raw);
+			const parsed = JSON.parse(texto.trim());
 			const importadas = Array.isArray(parsed) ? parsed : parsed.estampas;
 			if (!Array.isArray(importadas)) {
-				Alert.alert("Importacion", "El archivo no tiene un formato valido.");
-				return;
+				return { ok: false, mensaje: "El texto no tiene un formato valido." };
 			}
 			const normalizadas = normalizarImportadas(importadas);
 			setEstampas(normalizadas);
 			setTieneCambios(false);
 			await guardarArchivoLocal(normalizadas);
-			Alert.alert("Importacion lista", "Avance restaurado correctamente.");
+			return { ok: true };
 		} catch (error) {
-			Alert.alert("Error", "No se pudo importar el avance.");
+			return { ok: false, mensaje: "No se pudo leer el JSON." };
 		}
+	};
+
+	const restaurarDesdeHistorial = async (entrada) => {
+		if (!entrada?.estampas) {
+			return false;
+		}
+		const normalizadas = normalizarImportadas(entrada.estampas);
+		setEstampas(normalizadas);
+		setTieneCambios(false);
+		await guardarArchivoLocal(normalizadas);
+		return true;
 	};
 
 	const restablecerAvance = () => {
@@ -313,6 +329,13 @@ export default function App() {
 		const init = async () => {
 			try {
 				const generadas = generarEstampas();
+				try {
+					const rawHistorial = await AsyncStorage.getItem(historialKey);
+					const parsedHistorial = rawHistorial ? JSON.parse(rawHistorial) : [];
+					setHistorialRespaldos(Array.isArray(parsedHistorial) ? parsedHistorial : []);
+				} catch (error) {
+					setHistorialRespaldos([]);
+				}
 				if (Platform.OS === "web") {
 					const raw = localStorage.getItem(almacenamientoWebKey);
 					if (raw) {
@@ -338,17 +361,28 @@ export default function App() {
 					setListo(true);
 					return;
 				}
-				if (!FileSystem.documentDirectory) {
-					setEstampas(generadas);
-					setTieneCambios(false);
-					setListo(true);
-					return;
+				let raw = null;
+				try {
+					raw = await AsyncStorage.getItem(almacenamientoAsyncKey);
+				} catch (error) {
+					raw = null;
 				}
-				const info = await FileSystem.getInfoAsync(archivoLocal);
-				if (info.exists) {
-					const raw = await FileSystem.readAsStringAsync(archivoLocal, {
-						encoding: FileSystem.EncodingType.UTF8,
-					});
+				if (!raw && FileSystem.documentDirectory) {
+					const info = await FileSystem.getInfoAsync(archivoLocal);
+					if (info.exists) {
+						raw = await FileSystem.readAsStringAsync(archivoLocal, {
+							encoding: FileSystem.EncodingType.UTF8,
+						});
+						if (raw) {
+							try {
+								await AsyncStorage.setItem(almacenamientoAsyncKey, raw);
+							} catch (error) {
+								// Si falla, se usa el raw de todas formas.
+							}
+						}
+					}
+				}
+				if (raw) {
 					const parsed = JSON.parse(raw);
 					const importadas = Array.isArray(parsed) ? parsed : parsed.estampas;
 					const normalizadas = Array.isArray(importadas)
@@ -356,6 +390,7 @@ export default function App() {
 						: generadas;
 					setEstampas(normalizadas);
 					setTieneCambios(false);
+					setUltimoGuardadoEn(parsed.actualizadoEn ?? null);
 				} else {
 					setEstampas(generadas);
 					setTieneCambios(false);
@@ -379,7 +414,6 @@ export default function App() {
 
 		init();
 	}, []);
-
 
 	const actualizarEstampa = (id, actualizador) => {
 		setEstampas((actuales) =>
@@ -421,9 +455,13 @@ export default function App() {
 				<MainNavigator
 					estampas={estampas}
 					actualizarEstampa={actualizarEstampa}
-					exportarAvance={exportarAvance}
-					importarAvance={importarAvance}
+					compartirAvanceTexto={compartirAvanceTexto}
+					copiarAvanceTexto={copiarAvanceTexto}
+					importarDesdeTexto={importarDesdeTexto}
+					historialRespaldos={historialRespaldos}
+					restaurarDesdeHistorial={restaurarDesdeHistorial}
 					tieneCambios={tieneCambios}
+					ultimoGuardadoEn={ultimoGuardadoEn}
 					restablecerAvance={restablecerAvance}
 				/>
 			</View>
